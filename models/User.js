@@ -15,7 +15,12 @@ var UserSchema = new mongoose.Schema({
     type: String, 
     lowercase: true, 
     unique: true, 
+    required: true,
     index: true
+  },
+  password: {
+    type: String,
+    required: true
   },
   bio: String,
   image: String,
@@ -29,13 +34,6 @@ var UserSchema = new mongoose.Schema({
 UserSchema.methods.validPassword = function(password) {
   var hash = crypto.pbkdf2Sync(password, this.salt, 10000, 512, 'sha512').toString('hex');
   return this.hash === hash;
-};
-
-UserSchema.methods.setPassword = async function(password){
-  // Using bcrpt instead
-  const salt = await bcrypt.genSalt(10);
-  password = await bcrypt.hash(password, salt);
-  return password;
 };
 
 UserSchema.methods.toProfileJSONFor = function(user){
