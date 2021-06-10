@@ -4,14 +4,42 @@ var slug = require('slug');
 var User = require('./User');
 
 var ArticleSchema = new mongoose.Schema({
-  slug: {type: String, lowercase: true, unique: true},
-  title: String,
-  description: String,
-  body: String,
-  favoritesCount: {type: Number, default: 0},
-  comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
-  tagList: [{ type: String }],
-  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  slug: {
+    type: String, 
+    lowercase: true, 
+    unique: true
+  },
+  title: {
+    type: String, 
+    required: true, 
+  },
+  description: {
+    type: String, 
+    required: true, 
+  },
+  body: {
+    type: String, 
+    required: true, 
+  },
+  favoritesCount: {
+    type: Number, 
+    default: 0
+  },
+  comments: [
+    { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Comment' 
+    }
+  ],
+  tagList: [
+    {
+      type: String 
+    }
+  ],
+  author: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  }
 }, {timestamps: true});
 
 ArticleSchema.plugin(uniqueValidator, {message: 'is already taken'});
@@ -53,4 +81,4 @@ ArticleSchema.methods.toJSONFor = function(user){
   };
 };
 
-mongoose.model('Article', ArticleSchema);
+module.exports = Article = mongoose.model('Article', ArticleSchema);

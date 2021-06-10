@@ -13,44 +13,75 @@ router.get('/user/:user_id', auth, async (req, res) => {
   try {
     // Find by ID takes in a single value which is the user ID that you are
     // looking for
-    let user = await User.findById(req.params.user_id);
+    let user = await User.findById(req.params.user_id).select('-password');;
 
     if(!user){
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    res.json({ username: user.username });
+    res.json(user);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
   }
 });
 
-router.put('/user', auth, function(req, res, next){
-  User.findById(req.payload.id).then(function(user){
-    if(!user){ return res.sendStatus(401); }
+// Edit user profile ie Username, email and password
+router.put('/user/:id', auth, async (req, res) => {
 
-    // only update fields that were actually passed...
-    if(typeof req.body.user.username !== 'undefined'){
-      user.username = req.body.user.username;
-    }
-    if(typeof req.body.user.email !== 'undefined'){
-      user.email = req.body.user.email;
-    }
-    if(typeof req.body.user.bio !== 'undefined'){
-      user.bio = req.body.user.bio;
-    }
-    if(typeof req.body.user.image !== 'undefined'){
-      user.image = req.body.user.image;
-    }
-    if(typeof req.body.user.password !== 'undefined'){
-      user.setPassword(req.body.user.password);
+  try {
+    // Check if user exists
+    const user = await User.findById(req.params.id);
+
+    if(!user) {
+      return res.status(401).json({ msg: 'User does not exist' });
     }
 
-    return user.save().then(function(){
-      return res.json({user: user.toAuthJSON()});
-    });
-  }).catch(next);
+    // Check for what the user has passed
+    if(req.body.username) {
+      user.username = req.body.username;
+    } else if(req.body.email) {
+      user.email = req.body.email;
+    } else if(req.body.password) {
+      // Encrypt password
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(req.body.password, salt);
+
+      // Create a JWT for the user
+      const payload = {
+        user: {
+          id: user.id
+        }
+      }
+
+      jwt.sign(
+        payload,
+        config.get('jwtSecret'),
+        { expiresIn: 360000 },
+        (err, token) => {
+          if(err) throw err;
+          res.json({ token })
+        }
+      )
+    }
+
+    // Save the user
+    await user.save();
+
+    const username = user.username;
+    const email = user.email;
+
+    const userWithoutPassword = {
+      username,
+      email
+    };
+
+    res.json(userWithoutPassword);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Server error' });
+  }
 });
 
 // Login with a specific user

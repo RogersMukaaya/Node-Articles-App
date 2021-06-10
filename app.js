@@ -24,10 +24,12 @@ app.use(cors());
 
 // Normal express config defaults
 app.use(require('morgan')('dev'));
+
 app.use(express.json({ extended: false }));
 // app.use(bodyParser.json());
 
 app.use(require('method-override')());
+
 app.use(express.static(__dirname + '/public'));
 
 app.use(session({ secret: 'conduit', cookie: { maxAge: 60000 }, resave: false, saveUninitialized: false  }));
@@ -48,7 +50,9 @@ require('./models/Article');
 require('./models/Comment');
 require('./config/passport');
 
-app.use(require('./routes'));
+// Define Routes
+app.use('/api/users', require('./routes/api/users'));
+app.use('/api/articles', require('./routes/api/articles'));
 
 /// catch 404 and forward to error handler
 app.use(function(req, res, next) {

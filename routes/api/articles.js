@@ -1,9 +1,10 @@
 var router = require('express').Router();
 var mongoose = require('mongoose');
-var Article = mongoose.model('Article');
+const Article = require('../../models/Article');
 var Comment = mongoose.model('Comment');
 var User = mongoose.model('User');
 var auth = require('../../middleware/auth');
+const { check, validationResult } = require('express-validator/check');
 
 // Preload article objects on routes with ':article'
 router.param('article', function(req, res, next, slug) {
@@ -122,19 +123,44 @@ router.get('/feed', auth, function(req, res, next) {
   });
 });
 
-router.post('/', auth, function(req, res, next) {
-  User.findById(req.payload.id).then(function(user){
-    if (!user) { return res.sendStatus(401); }
+// Create an article, you can only create one if at all
+// you are already a user
+router.post('/', [
+  check('title', 'Title is requied').not().isEmpty(),
+  check('description', 'Description is requied').not().isEmpty(),
+  check('body', 'Body is requied').not().isEmpty(),
+], auth, async (req, res) => {
+  // Check if there are no errors in terms of the data being
+  // sent. If there are any errors, then they will be enclosed in
+  // the errors variable which we can thereafter turn into an array
+  // and return it.
+  const errors = validationResult(req);
+  if(!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-    var article = new Article(req.body.article);
+  const {title, description, body} = req.body;
 
-    article.author = user;
+  try {
+    // Check if the user does exist, if we do want to check
+    // if the user accessing a protected route has an account,
+    // then we can his id that is tied to the request after decording
+    // the JWT being used to access the route
+    const user = await User.findById(req.user.id).select('-password');
 
-    return article.save().then(function(){
-      console.log(article.author);
-      return res.json({article: article.toJSONFor(user)});
+    const article = new Article({
+      title,
+      description,
+      body,
+      author: req.user.id
     });
-  }).catch(next);
+
+    await article.save();
+    res.json({ article });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: 'Server error' });
+  }
 });
 
 // return a article
