@@ -164,44 +164,91 @@ router.post('/', [
 });
 
 // return a article
-router.get('/:article', auth, function(req, res, next) {
-  Promise.all([
-    req.payload ? User.findById(req.payload.id) : null,
-    req.article.populate('author').execPopulate()
-  ]).then(function(results){
-    var user = results[0];
+router.get('/:article_id', auth, async (req, res) => {
+  // Check if the user trying to the access this route
+  // is logged in.
+  // try catch blocks help you to test code for errors
+  // and handle those errors
+  try {
+    let user = await User.findById(req.user.id);
+    
+    if(!user) {
+      return res.status(401).json({ msg: 'Invalid Credentials' })
+    }
 
-    return res.json({article: req.article.toJSONFor(user)});
-  }).catch(next);
+    // Check if the article being requested for belongs
+    // to the loggedin user
+    let articleId = req.params.article_id;
+
+    let article = await Article.findById(articleId);
+
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    if(req.user.id.toString() === article.author.toString()) {
+      res.json(article);
+    } else {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: 'Server error' });
+  }
+  // let user = await User.findById(req.user.id);
+  // Promise.all([
+  //   req.payload ? User.findById(req.payload.id) : null,
+  //   req.article.populate('author').execPopulate()
+  // ]).then(function(results){
+  //   var user = results[0];
+
+  //   return res.json({article: req.article.toJSONFor(user)});
+  // }).catch(next);
 });
 
 // update article
-router.put('/:article', auth, function(req, res, next) {
-  User.findById(req.payload.id).then(function(user){
-    if(req.article.author._id.toString() === req.payload.id.toString()){
-      if(typeof req.body.article.title !== 'undefined'){
-        req.article.title = req.body.article.title;
-      }
+router.put('/:article_id', auth, async (req, res) => {
 
-      if(typeof req.body.article.description !== 'undefined'){
-        req.article.description = req.body.article.description;
-      }
+  try {
+    // Check if the user is logged in. What this means is that we check in the
+    // the user's collection for a document's id that matches the one we are
+    // passing in. 
+    const user = await User.findById(req.user.id);
 
-      if(typeof req.body.article.body !== 'undefined'){
-        req.article.body = req.body.article.body;
-      }
-
-      if(typeof req.body.article.tagList !== 'undefined'){
-        req.article.tagList = req.body.article.tagList
-      }
-
-      req.article.save().then(function(article){
-        return res.json({article: article.toJSONFor(user)});
-      }).catch(next);
-    } else {
-      return res.sendStatus(403);
+    if(!user) {
+      return res.status(401).json({ msg: 'Access Denied' });
     }
-  });
+
+    let article = await Article.findById(req.params.article_id);
+
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    // Check if the article that is being edited belongs to the
+    // user that is logged in
+    if(req.user.id.toString() === article.author.toString()) {
+      // Get whatever has been passed by the user from the request
+      // and check for the info passed
+      if(req.body.title) {
+        article.title = req.body.title;
+      } else if(req.body.description) {
+        article.description = req.body.description;
+      } else if(req.body.body) {
+        article.description = req.body.body;
+      }
+
+      await article.save();
+      
+      res.json(article);
+    } else {
+      console.log('There is no article found');
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: 'Server error' });
+  }
 });
 
 // delete article
