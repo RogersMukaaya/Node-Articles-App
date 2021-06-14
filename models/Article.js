@@ -21,6 +21,14 @@ var ArticleSchema = new mongoose.Schema({
     type: String, 
     required: true, 
   },
+  // Likes is an array of objects of user's ids that 
+  // have decided to like the article
+  likes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  ],
   favoritesCount: {
     type: Number, 
     default: 0

@@ -5,6 +5,7 @@ var Comment = mongoose.model('Comment');
 var User = mongoose.model('User');
 var auth = require('../../middleware/auth');
 const { check, validationResult } = require('express-validator/check');
+const { findById } = require('../../models/Article');
 
 // Preload article objects on routes with ':article'
 router.param('article', function(req, res, next, slug) {
@@ -252,18 +253,34 @@ router.put('/:article_id', auth, async (req, res) => {
 });
 
 // delete article
-router.delete('/:article', auth, function(req, res, next) {
-  User.findById(req.payload.id).then(function(user){
-    if (!user) { return res.sendStatus(401); }
+router.delete('/:article_id', auth, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
 
-    if(req.article.author._id.toString() === req.payload.id.toString()){
-      return req.article.remove().then(function(){
-        return res.sendStatus(204);
-      });
-    } else {
-      return res.sendStatus(403);
+    if(!user) {
+      return res.status(401).json({ msg: 'Access Denied' });
     }
-  }).catch(next);
+
+    const article = await Article.findById(req.params.article_id);
+
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not Found' });
+    }
+
+    // This extra step of checking whether the article being accessed
+    // belongs to the loggedin user might not be neccessary since for the
+    // user to access any article then they have to be logged in which makes no
+    // sense to recheck if any article being accessed belongs to them, we just have to
+    // check if the article exists
+    if(req.user.id.toString() === article.author.toString()) {
+      await Article.remove({ _id: article._id });
+      res.json({ msg: 'Article removed' });
+    }
+    
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: 'Server error' });
+  }
 });
 
 // Favorite an article
