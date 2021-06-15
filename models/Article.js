@@ -25,18 +25,29 @@ var ArticleSchema = new mongoose.Schema({
   // have decided to like the article
   likes: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
     }
   ],
-  favoritesCount: {
-    type: Number, 
-    default: 0
-  },
   comments: [
-    { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Comment' 
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Comment' 
+      },
+
+      text: {
+        type: String,
+        required: true
+      },
+
+      date: {
+        type: Date,
+        default: Date.now
+      }
+
     }
   ],
   tagList: [

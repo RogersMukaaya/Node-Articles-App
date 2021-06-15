@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs');
 const config = require('config');
 
 // Get a specific user while logged in 
-router.get('/user/:user_id', auth, async (req, res) => {
+router.get('/:user_id', auth, async (req, res) => {
   try {
     // Find by ID takes in a single value which is the user ID that you are
     // looking for
@@ -27,11 +27,11 @@ router.get('/user/:user_id', auth, async (req, res) => {
 });
 
 // Edit user profile ie Username, email and password
-router.put('/user/:id', auth, async (req, res) => {
+router.put('/:user_id', auth, async (req, res) => {
 
   try {
     // Check if user exists
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.user_id);
 
     if(!user) {
       return res.status(401).json({ msg: 'User does not exist' });
@@ -85,7 +85,7 @@ router.put('/user/:id', auth, async (req, res) => {
 });
 
 // Login with a specific user
-router.post('/users/login', [
+router.post('/login', [
   check('email', 'Please enter a valid email').isEmail(),
   check('password', 'Password is required').exists()
 ], async (req, res, next) => {
@@ -136,7 +136,7 @@ router.post('/users/login', [
 
 // Register a new user
 
-router.post('/users', [
+router.post('/', [
   check('username', 'Username is required').not().isEmpty(),
   check('email', 'Email is required').isEmail(),
   check(

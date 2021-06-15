@@ -276,41 +276,74 @@ router.delete('/:article_id', auth, async (req, res, next) => {
       await Article.remove({ _id: article._id });
       res.json({ msg: 'Article removed' });
     }
-    
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ msg: 'Server error' });
   }
 });
 
-// Favorite an article
-router.post('/:article/favorite', auth, function(req, res, next) {
-  var articleId = req.article._id;
+// Like an article
+router.put('/like/:article_id', auth, async (req, res) => {
 
-  User.findById(req.payload.id).then(function(user){
-    if (!user) { return res.sendStatus(401); }
+  try {
+    const user = await User.findById(req.user.id);
 
-    return user.favorite(articleId).then(function(){
-      return req.article.updateFavoriteCount().then(function(article){
-        return res.json({article: article.toJSONFor(user)});
-      });
-    });
-  }).catch(next);
+    if(!user) {
+      return res.status(401).json({ msg: 'Invalid Credentials' });
+    }
+
+    const article = await Article.findById(req.params.article_id);
+
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    //Check if a post has already been liked by the logged in user
+    if(article.likes.filter(like => like.user.toString() === req.user.id).length > 0) {
+      return res.status(400).json({ msg: 'Article already liked' });
+    }
+
+    // Add a like to an article
+    article.likes.push({ user: req.user.id });
+
+    await article.save();
+
+    res.json(article.likes);
+  } catch (error) {
+    console.error('Server Error');
+    return res.status(500).json({ msg: 'Server Error' });
+  }
 });
 
-// Unfavorite an article
-router.delete('/:article/favorite', auth, function(req, res, next) {
-  var articleId = req.article._id;
+// Unlike an article
+router.put('/unlike/:article_id', auth, async (req, res) => {
 
-  User.findById(req.payload.id).then(function (user){
-    if (!user) { return res.sendStatus(401); }
+  try {
+    // Get the article
+    const article = await Article.findById(req.params.article_id);
 
-    return user.unfavorite(articleId).then(function(){
-      return req.article.updateFavoriteCount().then(function(article){
-        return res.json({article: article.toJSONFor(user)});
-      });
-    });
-  }).catch(next);
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    // //Check if the article being unliked was liked by the loggedin user
+    // if(article.likes.filter(like => like.user.toString() === req.user.id).length === 0) {
+    //   return res.status(400).json({ msg: "Article hasn't been liked yet" });
+    // }
+
+    const removeIndex = article.likes.map(like => like.user.toString()).indexOf(req.user.id);
+
+    // //Unlike article
+    // article.slice(userLike, 1);
+
+    console.log(removeIndex);
+
+    res.json(article);
+  } catch (error) {
+    console.error('Server Error');
+    return res.status(500).json({ msg: 'Server Error' });
+  }
 });
 
 // return an article's comments
