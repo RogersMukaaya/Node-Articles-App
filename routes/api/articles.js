@@ -328,16 +328,20 @@ router.put('/unlike/:article_id', auth, async (req, res) => {
     }
 
     // //Check if the article being unliked was liked by the loggedin user
-    // if(article.likes.filter(like => like.user.toString() === req.user.id).length === 0) {
-    //   return res.status(400).json({ msg: "Article hasn't been liked yet" });
-    // }
+    if(article.likes.filter(like => like.user.toString() === req.user.id).length === 0) {
+      return res.status(400).json({ msg: "Article hasn't been liked yet" });
+    }
 
+    // Remember .indexOf finds the index of a specific element in an array but in order
+    // to get that index, you must pass in the real element hence stringfying all the likes
+    // in order to find the index of one that matches the like of the currently liked
     const removeIndex = article.likes.map(like => like.user.toString()).indexOf(req.user.id);
 
     // //Unlike article
-    // article.slice(userLike, 1);
+    article.likes.splice(removeIndex, 1);
 
-    console.log(removeIndex);
+    // Save article
+    await article.save();
 
     res.json(article);
   } catch (error) {
@@ -347,7 +351,32 @@ router.put('/unlike/:article_id', auth, async (req, res) => {
 });
 
 // return an article's comments
-router.get('/:article/comments', auth, function(req, res, next){
+router.get('/comments/:article', [
+  auth,
+  check('text', 'Enter a comment').not().isEmpty()
+], async (req, res) => {
+
+  const text = req.body.text;
+
+  try {
+    const article = new Article.findById(req.user.id);
+
+    if(!article) {
+      return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    const comment = {
+      user: req.user.id,
+      text: text
+    }
+
+    article.comments.unShift(comment);
+
+    await article.save();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: 'Server ' });
+  }
   Promise.resolve(req.payload ? User.findById(req.payload.id) : null).then(function(user){
     return req.article.populate({
       path: 'comments',
