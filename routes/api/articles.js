@@ -350,16 +350,24 @@ router.put('/unlike/:article_id', auth, async (req, res) => {
   }
 });
 
-// return an article's comments
-router.get('/comments/:article', [
+// Add a comment to an article
+router.post('/comments/:article_id', [
   auth,
   check('text', 'Enter a comment').not().isEmpty()
 ], async (req, res) => {
+  console.log('here');
+  // Check if the required data has been sent
+  const errors = validationResult(req);
+
+  if(!errors.isEmpty()) {
+    console.log(errors);
+    res.status(400).json({ errors: errors.array() });
+  }
 
   const text = req.body.text;
 
   try {
-    const article = new Article.findById(req.user.id);
+    const article = await Article.findById(req.params.article_id);
 
     if(!article) {
       return res.status(404).json({ msg: 'Article not found' });
@@ -368,64 +376,49 @@ router.get('/comments/:article', [
     const comment = {
       user: req.user.id,
       text: text
-    }
+    };
 
-    article.comments.unShift(comment);
+    article.comments.unshift(comment);
 
     await article.save();
+
+    res.json(article);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ msg: 'Server ' });
+    return res.status(500).json({ msg: 'Server Error' });
   }
-  Promise.resolve(req.payload ? User.findById(req.payload.id) : null).then(function(user){
-    return req.article.populate({
-      path: 'comments',
-      populate: {
-        path: 'author'
-      },
-      options: {
-        sort: {
-          createdAt: 'desc'
-        }
-      }
-    }).execPopulate().then(function(article) {
-      return res.json({comments: req.article.comments.map(function(comment){
-        return comment.toJSONFor(user);
-      })});
-    });
-  }).catch(next);
 });
 
 // create a new comment
-router.post('/:article/comments', auth, function(req, res, next) {
-  User.findById(req.payload.id).then(function(user){
-    if(!user){ return res.sendStatus(401); }
+// router.post('/:article/comments', auth, function(req, res, next) {
+//   User.findById(req.payload.id).then(function(user){
+//     if(!user){ return res.sendStatus(401); }
 
-    var comment = new Comment(req.body.comment);
-    comment.article = req.article;
-    comment.author = user;
+//     var comment = new Comment(req.body.comment);
+//     comment.article = req.article;
+//     comment.author = user;
 
-    return comment.save().then(function(){
-      req.article.comments.push(comment);
+//     return comment.save().then(function(){
+//       req.article.comments.push(comment);
 
-      return req.article.save().then(function(article) {
-        res.json({comment: comment.toJSONFor(user)});
-      });
-    });
-  }).catch(next);
-});
+//       return req.article.save().then(function(article) {
+//         res.json({comment: comment.toJSONFor(user)});
+//       });
+//     });
+//   }).catch(next);
+// });
 
-router.delete('/:article/comments/:comment', auth, function(req, res, next) {
-  if(req.comment.author.toString() === req.payload.id.toString()){
-    req.article.comments.remove(req.comment._id);
-    req.article.save()
-      .then(Comment.find({_id: req.comment._id}).remove().exec())
-      .then(function(){
-        res.sendStatus(204);
-      });
-  } else {
-    res.sendStatus(403);
-  }
-});
+// router.delete('/:article/comments/:comment', auth, function(req, res, next) {
+//   if(req.comment.author.toString() === req.payload.id.toString()){
+//     req.article.comments.remove(req.comment._id);
+//     req.article.save()
+//       .then(Comment.find({_id: req.comment._id}).remove().exec())
+//       .then(function(){
+//         res.sendStatus(204);
+//       });
+//   } else {
+//     res.sendStatus(403);
+//   }
+// });
 
 module.exports = router;
