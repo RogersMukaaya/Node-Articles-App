@@ -101,7 +101,7 @@ router.post('/login', [
     let user = await User.findOne({ email });
 
     if(!user) {
-      return res.json.status(400).json({msg: 'Invalid Credentials'});
+      return res.status(400).json({msg: 'Invalid Credentials'});
     }
 
     // Compare the password that was entered with that, that was encripted
